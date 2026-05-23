@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prod-check": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/prod-check.ts"
+    "prod-check": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/prod-check.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
