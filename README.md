@@ -19,7 +19,7 @@ This application is a concurrency-safe, high-performance inventory reservation s
 
 ---
 
-## 🚀 Setup & Installation
+## Setup & Installation
 
 ### 1. Environment Variables
 Create a `.env` file in the root of the project with the following values:
@@ -67,7 +67,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ---
 
-## 🏗️ Technical Architecture
+## Technical Architecture
 
 ### 1. Concurrency Control (Distributed Lock)
 To prevent race conditions during checkout:
@@ -88,7 +88,7 @@ To prevent race conditions during checkout:
 
 ---
 
-## ⚖️ Architectural Trade-offs
+## Architectural Trade-offs
 
 1. **Locking Granularity**: 
    * *Choice*: The Redis lock is keyed per `productId` + `warehouseId` (e.g. `reservation:{productId}:{warehouseId}`).
