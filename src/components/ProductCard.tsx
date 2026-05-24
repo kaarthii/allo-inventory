@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { ProductWithStock } from '@/types'
+import { Package, Warehouse, Circle, AlertCircle } from 'lucide-react'
 
 // Helper to generate UUID for Idempotency
 function generateUUID() {
@@ -24,16 +25,17 @@ function generateUUID() {
 
 interface ProductCardProps {
   product: ProductWithStock
+  index: number
 }
 
-// Map products to specific luxury gradients
+// Map products to specific premium linear glow backdrops
 const GRADIENT_MAP: Record<string, string> = {
-  headphones: 'from-violet-600 to-indigo-900 shadow-indigo-500/20',
-  keyboard: 'from-pink-600 to-rose-950 shadow-rose-500/20',
-  'usb-hub': 'from-cyan-600 to-teal-900 shadow-teal-500/20',
+  headphones: 'from-indigo-500/20 to-surface-card border-b border-indigo-500/10',
+  keyboard: 'from-rose-500/20 to-surface-card border-b border-rose-500/10',
+  'usb-hub': 'from-cyan-500/20 to-surface-card border-b border-cyan-500/10',
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, index }: ProductCardProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [selectedWarehouse, setSelectedWarehouse] = useState('')
@@ -41,7 +43,21 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [clientIdempotencyKey, setClientIdempotencyKey] = useState('')
 
-  const gradient = GRADIENT_MAP[product.id] || 'from-zinc-700 to-zinc-900 shadow-zinc-500/20'
+  const gradient = GRADIENT_MAP[product.id] || 'from-text-tertiary/10 to-surface-card border-b border-border-subtle'
+
+  // Stagger delays mapping
+  const delays = [
+    'animation-delay-0',
+    'animation-delay-75',
+    'animation-delay-150',
+    'animation-delay-225',
+    'animation-delay-300',
+    'animation-delay-375'
+  ]
+  const delayClass = delays[index % delays.length]
+
+  const totalAvailable = product.stocks.reduce((acc, s) => acc + s.available, 0)
+  const isOutOfStock = totalAvailable === 0
 
   // Initialize form and generate idempotency key when opening the dialog
   const handleOpenChange = (open: boolean) => {
@@ -114,63 +130,85 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   }
 
+  // Minus and Plus controls logic
+  const selectedStock = product.stocks.find(s => s.warehouseId === selectedWarehouse)
+  const maxQty = selectedStock ? selectedStock.available : 1
+
+  const handleDecrement = () => {
+    setQuantity(prev => Math.max(1, prev - 1))
+  }
+
+  const handleIncrement = () => {
+    setQuantity(prev => Math.min(maxQty, prev + 1))
+  }
+
   return (
-    <Card className="group overflow-hidden rounded-2xl border border-zinc-100 bg-white/70 shadow-lg shadow-zinc-100 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-none dark:hover:bg-zinc-900">
+    <Card className={`group overflow-hidden rounded-2xl border border-border-subtle bg-surface-card shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-indigo/40 hover:shadow-[0_8px_24px_rgba(99,102,241,0.08)] animate-fade-in-up ${delayClass}`}>
       {/* Visual Header Gradient */}
       <div className={`relative h-48 w-full bg-gradient-to-br ${gradient} p-6 flex flex-col justify-end overflow-hidden`}>
         {/* Subtle decorative glow */}
-        <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/10 blur-2xl transition-transform duration-500 group-hover:scale-125" />
+        <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/5 blur-2xl transition-transform duration-500 group-hover:scale-125" />
         
         {/* Absolute branding / category badge */}
-        <div className="absolute top-4 right-4 rounded-full bg-black/25 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md">
-          In Stock
+        <div className="absolute top-4 right-4 rounded-full bg-surface-bg/60 border border-border-subtle px-3 py-1 text-2xs font-mono font-bold tracking-wider text-text-secondary backdrop-blur-md uppercase select-none">
+          {isOutOfStock ? 'Sold Out' : 'Active'}
         </div>
         
         {/* Product Ambient Icon / Decorator */}
-        <div className="mb-2 text-4xl select-none filter drop-shadow">
-          {product.id === 'headphones' && '🎧'}
-          {product.id === 'keyboard' && '⌨️'}
-          {product.id === 'usb-hub' && '🔌'}
+        <div className="mb-2 text-4xl select-none filter drop-shadow flex items-center justify-between w-full">
+          <span>
+            {product.id === 'headphones' && '🎧'}
+            {product.id === 'keyboard' && '⌨️'}
+            {product.id === 'usb-hub' && '🔌'}
+          </span>
+          <Package className="h-5 w-5 text-text-tertiary group-hover:text-brand-indigo transition-colors" />
         </div>
 
-        <CardTitle className="text-xl font-bold tracking-tight text-white drop-shadow-sm leading-none">
+        <CardTitle className="text-xl font-heading font-bold tracking-tight text-white drop-shadow-sm leading-none">
           {product.name}
         </CardTitle>
       </div>
 
       <CardHeader className="p-5 pb-0">
-        <CardDescription className="text-sm font-medium text-zinc-500 line-clamp-2 min-h-10 dark:text-zinc-400">
+        <CardDescription className="text-sm font-medium text-text-secondary line-clamp-2 min-h-10">
           {product.description || 'No description available.'}
         </CardDescription>
+        <span className="font-mono text-[10px] text-text-tertiary uppercase tracking-wider select-all mt-1 block">
+          ID: {product.id}
+        </span>
       </CardHeader>
 
-      <CardContent className="p-5 pb-2">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-3">
+      <CardContent className="p-5 pb-2 mt-4">
+        <h4 className="text-2xs font-heading font-extrabold uppercase tracking-wider text-text-tertiary mb-3 select-none">
           Available Stock by Warehouse
         </h4>
         <div className="space-y-2.5">
           {product.stocks.map((stock) => (
             <div
               key={stock.warehouseId}
-              className="flex items-center justify-between rounded-lg border border-zinc-50 bg-zinc-50/50 px-3 py-2 text-xs transition-colors dark:border-zinc-800 dark:bg-zinc-800/30"
+              className="flex items-center justify-between rounded-xl border border-border-subtle bg-surface-bg/30 px-3.5 py-3 text-xs transition-colors hover:border-border-hover"
             >
-              <span className="font-semibold text-zinc-600 dark:text-zinc-300">
-                {stock.warehouseName}
-              </span>
               <div className="flex items-center gap-2">
-                <span className="text-zinc-400 text-[10px]">
+                <Warehouse className="h-3.5 w-3.5 text-text-tertiary" />
+                <span className="font-semibold text-text-secondary">
+                  {stock.warehouseName}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-text-tertiary text-[10px] font-mono">
                   ({stock.reserved} reserved)
                 </span>
-                <Badge
-                  variant={stock.available > 0 ? 'secondary' : 'destructive'}
-                  className={`px-2.5 py-0.5 font-bold tracking-wide rounded-md ${
-                    stock.available > 0
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
-                      : 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400'
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-2xs font-bold tracking-wide border ${
+                    stock.available > 5
+                      ? 'bg-state-success/15 text-state-success border-state-success/20'
+                      : stock.available > 0
+                      ? 'bg-state-warning/15 text-state-warning border-state-warning/20'
+                      : 'bg-state-danger/15 text-state-danger border-state-danger/20'
                   }`}
                 >
                   {stock.available > 0 ? `${stock.available} available` : 'Out of stock'}
-                </Badge>
+                </span>
               </div>
             </div>
           ))}
@@ -181,66 +219,116 @@ export function ProductCard({ product }: ProductCardProps) {
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button
-              className="w-full py-6 rounded-xl font-bold bg-zinc-950 text-white shadow-xl hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-all cursor-pointer"
+              disabled={isOutOfStock}
+              className="w-full py-5 rounded-lg font-heading font-semibold bg-brand-indigo text-white hover:bg-brand-indigo-hover disabled:bg-text-tertiary/10 disabled:text-text-tertiary disabled:cursor-not-allowed disabled:border-transparent transition-all cursor-pointer select-none"
             >
-              Reserve Inventory
+              {isOutOfStock ? 'Out of Stock' : 'Reserve'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md rounded-2xl border border-zinc-100 bg-white/95 p-6 shadow-2xl backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold tracking-tight">
+          <DialogContent className="max-w-md rounded-2xl border border-border-subtle bg-surface-popover p-6 shadow-2xl backdrop-blur-md">
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="text-xl font-heading font-bold tracking-tight text-white">
                 Reserve {product.name}
               </DialogTitle>
-              <DialogDescription className="text-zinc-500 dark:text-zinc-400">
+              <DialogDescription className="text-sm text-text-secondary leading-relaxed">
                 Secures your stock for exactly 10 minutes. If payment is completed, the reservation becomes permanent.
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleReserve} className="mt-4 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            <form onSubmit={handleReserve} className="mt-6 space-y-5">
+              <div className="space-y-2">
+                <label className="text-2xs font-heading font-extrabold uppercase tracking-wider text-text-tertiary">
                   Select Warehouse Location
                 </label>
-                <select
-                  value={selectedWarehouse}
-                  onChange={(e) => setSelectedWarehouse(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-3 text-sm font-semibold outline-none focus:border-zinc-950 dark:border-zinc-800 dark:bg-zinc-900/50 dark:focus:border-zinc-50"
-                  required
-                >
-                  {product.stocks.map((stock) => (
-                    <option key={stock.warehouseId} value={stock.warehouseId} disabled={stock.available === 0}>
-                      {stock.warehouseName} ({stock.available} left)
-                    </option>
-                  ))}
-                </select>
+                
+                {/* Modern Styled Radio Selector Grid instead of dropdown select */}
+                <div className="grid grid-cols-1 gap-3">
+                  {product.stocks.map((stock) => {
+                    const isDisabled = stock.available === 0
+                    const isSelected = selectedWarehouse === stock.warehouseId
+                    return (
+                      <button
+                        key={stock.warehouseId}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => {
+                          setSelectedWarehouse(stock.warehouseId)
+                          setQuantity(1) // reset quantity to 1 when changing warehouse
+                        }}
+                        className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                          isDisabled
+                            ? 'opacity-30 cursor-not-allowed border-border-subtle bg-surface-card/20'
+                            : isSelected
+                            ? 'border-brand-indigo bg-brand-indigo/10 shadow-[0_0_12px_rgba(99,102,241,0.15)] text-white'
+                            : 'border-border-subtle bg-surface-bg/40 hover:border-border-hover text-text-primary'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold">{stock.warehouseName}</span>
+                          <span className="text-xs text-text-secondary mt-0.5">
+                            {stock.available} available ({stock.reserved} reserved)
+                          </span>
+                        </div>
+                        {/* Styled Radio Circle */}
+                        <div className={`h-5 w-5 rounded-full border flex items-center justify-center transition-all ${
+                          isSelected ? 'border-brand-indigo bg-brand-indigo' : 'border-border-subtle'
+                        }`}>
+                          {isSelected && <Circle className="h-2 w-2 text-white fill-white animate-scale-in" />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              {/* Styled Quantity input with custom +/- controls */}
+              <div className="space-y-2">
+                <label className="text-2xs font-heading font-extrabold uppercase tracking-wider text-text-tertiary">
                   Quantity to Reserve
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-3 text-sm font-semibold outline-none focus:border-zinc-950 dark:border-zinc-800 dark:bg-zinc-900/50 dark:focus:border-zinc-50"
-                  required
-                />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleDecrement}
+                    disabled={quantity <= 1}
+                    className="h-11 w-11 flex items-center justify-center rounded-xl bg-surface-bg/60 border border-border-subtle hover:border-border-hover disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg font-bold cursor-pointer transition-all"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxQty}
+                    value={quantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 1
+                      setQuantity(Math.max(1, Math.min(maxQty, val)))
+                    }}
+                    className="flex-1 h-11 text-center font-heading font-bold rounded-xl border border-border-subtle bg-surface-bg text-white outline-none focus:border-brand-indigo [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleIncrement}
+                    disabled={quantity >= maxQty}
+                    className="h-11 w-11 flex items-center justify-center rounded-xl bg-surface-bg/60 border border-border-subtle hover:border-border-hover disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg font-bold cursor-pointer transition-all"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
 
               {/* Idempotency Key debug notice */}
-              <div className="rounded-lg bg-zinc-50 p-3 text-[10px] text-zinc-400 dark:bg-zinc-900/50 dark:text-zinc-500">
-                <span className="font-bold uppercase tracking-wide mr-1">Idempotency Key:</span>
-                <code className="select-all font-mono">{clientIdempotencyKey}</code>
+              <div className="rounded-xl bg-surface-bg border border-border-subtle p-3.5 text-[10px] text-text-tertiary select-none">
+                <span className="font-mono font-bold uppercase tracking-wider mr-1 text-brand-teal">Idempotency Key:</span>
+                <code className="select-all font-mono text-text-secondary">{clientIdempotencyKey}</code>
               </div>
 
               <DialogFooter className="pt-2">
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-6 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 shadow-lg cursor-pointer"
+                  className="w-full py-5 rounded-lg font-heading font-bold bg-brand-indigo hover:bg-brand-indigo-hover text-white disabled:opacity-60 disabled:cursor-not-allowed shadow-lg cursor-pointer"
                 >
                   {isLoading ? 'Reserving Stock...' : 'Confirm Reservation'}
                 </Button>

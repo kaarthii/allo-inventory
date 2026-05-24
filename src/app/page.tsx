@@ -36,63 +36,67 @@ export default async function HomePage() {
   }))
 
   return (
-    <div className="min-h-screen bg-slate-50/50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] dark:bg-zinc-950 dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)]">
-      <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24 lg:px-8">
+    <div className="min-h-screen bg-surface-bg bg-[radial-gradient(#1e2433_1px,transparent_1px)] [background-size:32px_32px]">
+      <div className="mx-auto max-w-7xl px-6 py-10 sm:py-16 lg:px-8">
         
-        {/* Modern Premium Header */}
-        <header className="mx-auto max-w-3xl text-center mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/50 bg-emerald-50/50 px-3 py-1 text-xs font-semibold text-emerald-800 backdrop-blur-sm dark:border-emerald-800/30 dark:bg-emerald-950/20 dark:text-emerald-400">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Active Concurrency Protection
+        {/* Modern Premium Header Section */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-16 pb-8 border-b border-border-subtle">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-heading font-bold tracking-tight text-white sm:text-5xl">
+              Inventory
+            </h1>
+            <p className="text-base text-text-secondary max-w-xl">
+              Real-time stock across all warehouses. Secured by high-concurrency safeguards.
+            </p>
           </div>
           
-          <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-50 leading-none">
-            Allo Health
-          </h1>
-          <p className="text-lg font-medium text-zinc-500 sm:text-xl dark:text-zinc-400">
-            Real-time Inventory Reservation & Checkout Gateway. Secure your items with distributed locks and atomic guarantees.
-          </p>
+          <div className="flex items-center self-start md:self-auto">
+            <span className="inline-flex items-center gap-2 rounded-full border border-state-success/20 bg-state-success/10 px-3.5 py-1.5 text-xs font-semibold text-state-success shadow-[0_0_12px_rgba(16,185,129,0.15)] select-none">
+              <span className="flex h-2 w-2 rounded-full bg-state-success animate-pulse-dot" />
+              Live
+            </span>
+          </div>
         </header>
 
         {/* Product Grid */}
         {products.length === 0 ? (
-          <div className="text-center py-20 rounded-3xl border border-dashed border-zinc-200 bg-white/40 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/40">
-            <h3 className="text-lg font-bold text-zinc-700 dark:text-zinc-300">No products found</h3>
-            <p className="text-sm text-zinc-400 mt-1">Please ensure the database seed script has been successfully run.</p>
+          <div className="text-center py-24 rounded-3xl border border-dashed border-border-subtle bg-surface-card/50 backdrop-blur-xl">
+            <h3 className="text-lg font-heading font-bold text-text-primary">No products found</h3>
+            <p className="text-sm text-text-secondary mt-2">Please ensure the database seed script has been successfully run.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {products.map((product, idx) => (
+              <ProductCard key={product.id} product={product} index={idx} />
             ))}
           </div>
         )}
 
         {/* Footer Technical Callout */}
-        <footer className="mt-24 border-t border-zinc-100 pt-8 dark:border-zinc-800/50">
+        <footer className="mt-28 border-t border-border-subtle pt-12">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 text-center sm:text-left">
-            <div className="rounded-2xl border border-zinc-100 bg-white/40 p-5 backdrop-blur-xl dark:border-zinc-800/30 dark:bg-zinc-900/30">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">
+            <div className="rounded-2xl border border-border-subtle bg-surface-card p-6 backdrop-blur-xl hover:border-border-hover hover:translate-y-[-1px] transition-all">
+              <h3 className="text-xs font-heading font-extrabold uppercase tracking-wider text-brand-indigo mb-2">
                 Distributed Lock
               </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                Uses Upstash Redis <code>SET NX</code> with a 10s TTL to serialize checkout requests, fully resolving race conditions.
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Uses Upstash Redis <code className="text-brand-teal font-mono">SET NX</code> with a 10s TTL to serialize checkout requests, fully resolving race conditions.
               </p>
             </div>
-            <div className="rounded-2xl border border-zinc-100 bg-white/40 p-5 backdrop-blur-xl dark:border-zinc-800/30 dark:bg-zinc-900/30">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">
+            <div className="rounded-2xl border border-border-subtle bg-surface-card p-6 backdrop-blur-xl hover:border-border-hover hover:translate-y-[-1px] transition-all">
+              <h3 className="text-xs font-heading font-extrabold uppercase tracking-wider text-brand-indigo mb-2">
                 Atomic Transactions
               </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              <p className="text-xs text-text-secondary leading-relaxed">
                 Database counters are incremented and decremented atomically in isolated Prisma transactions to protect data integrity.
               </p>
             </div>
-            <div className="rounded-2xl border border-zinc-100 bg-white/40 p-5 backdrop-blur-xl dark:border-zinc-800/30 dark:bg-zinc-900/30">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">
+            <div className="rounded-2xl border border-border-subtle bg-surface-card p-6 backdrop-blur-xl hover:border-border-hover hover:translate-y-[-1px] transition-all">
+              <h3 className="text-xs font-heading font-extrabold uppercase tracking-wider text-brand-indigo mb-2">
                 Idempotency Cache
               </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                Requests carrying an <code>Idempotency-Key</code> are cached in Redis for 24 hours, shielding the core system from duplicate orders.
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Requests carrying an <code className="text-brand-teal font-mono">Idempotency-Key</code> are cached in Redis for 24 hours, shielding the core system from duplicate orders.
               </p>
             </div>
           </div>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Reservation, ReservationStatus } from '@/types'
+import { Check, X, ArrowLeft, Clock, AlertCircle } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -21,6 +22,7 @@ export default function ReservationPage({ params }: PageProps) {
   const [reservation, setReservation] = useState<Reservation | null>(null)
   const [status, setStatus] = useState<ReservationStatus>('PENDING')
   const [timeLeft, setTimeLeft] = useState<string>('10:00')
+  const [progressPct, setProgressPct] = useState<number>(100)
   const [isExpired, setIsExpired] = useState(false)
   const [isActionLoading, setIsActionLoading] = useState(false)
   const [isFetching, setIsFetching] = useState(true)
@@ -61,15 +63,19 @@ export default function ReservationPage({ params }: PageProps) {
     fetchReservation()
   }, [reservationId, router])
 
-  // Live Timer Countdown
+  // Live Timer Countdown & Progress percentage logic
   useEffect(() => {
     if (!reservation || status !== 'PENDING') return
 
     const calculateTimeLeft = () => {
-      const difference = new Date(reservation.expiresAt).getTime() - Date.now()
+      const expires = new Date(reservation.expiresAt).getTime()
+      const created = new Date(reservation.createdAt).getTime()
+      const total = expires - created
+      const difference = expires - Date.now()
       
       if (difference <= 0) {
         setTimeLeft('00:00')
+        setProgressPct(0)
         setIsExpired(true)
         setStatus('RELEASED')
         toast.warning('Reservation has expired!', {
@@ -85,6 +91,7 @@ export default function ReservationPage({ params }: PageProps) {
       const secStr = seconds < 10 ? `0${seconds}` : `${seconds}`
 
       setTimeLeft(`${minStr}:${secStr}`)
+      setProgressPct(Math.max(0, Math.min(100, (difference / total) * 100)))
       return true
     }
 
@@ -164,10 +171,10 @@ export default function ReservationPage({ params }: PageProps) {
 
   if (isFetching) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-zinc-950">
+      <div className="flex min-h-screen items-center justify-center bg-surface-bg">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-950 dark:border-zinc-800 dark:border-t-zinc-50" />
-          <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">Securing your checkout terminal...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-border-subtle border-t-brand-indigo" />
+          <p className="text-xs font-mono tracking-wider text-text-secondary select-none">Securing your checkout terminal...</p>
         </div>
       </div>
     )
@@ -175,165 +182,242 @@ export default function ReservationPage({ params }: PageProps) {
 
   if (!reservation) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-zinc-950">
-        <p className="text-zinc-500">Error loading reservation. Returning home...</p>
+      <div className="flex min-h-screen items-center justify-center bg-surface-bg select-none">
+        <div className="text-center rounded-2xl border border-border-subtle bg-surface-card p-6">
+          <AlertCircle className="h-8 w-8 text-state-danger mx-auto mb-2" />
+          <p className="text-text-secondary text-sm">Error loading reservation. Returning home...</p>
+        </div>
       </div>
     )
   }
 
+  // Calculate dynamic colors for countdown progress bar
+  const expiresTime = new Date(reservation.expiresAt).getTime()
+  const differenceTime = expiresTime - Date.now()
+  const diffMinutes = differenceTime / 1000 / 60
+  
+  let barColor = 'bg-brand-indigo shadow-[0_0_8px_rgba(99,102,241,0.4)]'
+  if (diffMinutes < 1) {
+    barColor = 'bg-state-danger shadow-[0_0_8px_rgba(244,63,94,0.4)]'
+  } else if (diffMinutes <= 5) {
+    barColor = 'bg-state-warning shadow-[0_0_8px_rgba(245,158,11,0.4)]'
+  }
+
+  const isUrgent = differenceTime < 60000 && status === 'PENDING'
+
   return (
-    <div className="min-h-screen bg-slate-50/50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] dark:bg-zinc-950 dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] flex items-center justify-center px-4 py-16">
-      <div className="w-full max-w-xl">
+    <div className="min-h-screen bg-surface-bg bg-[radial-gradient(#1e2433_1px,transparent_1px)] [background-size:32px_32px] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[560px]">
         
-        {/* Floating Return Button */}
-        <Button
-          variant="ghost"
+        {/* Back link */}
+        <button
           onClick={() => router.push('/')}
-          className="mb-6 gap-2 rounded-xl text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50 cursor-pointer"
+          className="group mb-6 inline-flex items-center gap-2 rounded-lg text-xs font-mono tracking-wider uppercase text-text-secondary hover:text-white cursor-pointer transition-all select-none"
         >
-          ← Return to Product Store
-        </Button>
+          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+          Back to products
+        </button>
 
-        {/* Premium Receipt-style Checkout Card */}
-        <Card className="rounded-3xl border border-zinc-100 bg-white/70 shadow-2xl shadow-zinc-200/50 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-none">
-          <CardHeader className="p-8 pb-4 text-center border-b border-zinc-100 dark:border-zinc-800/50">
-            <div className="mx-auto mb-4">
-              {status === 'PENDING' && (
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 animate-bounce">
-                  ⏳
-                </div>
-              )}
-              {status === 'CONFIRMED' && (
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
-                  ✓
-                </div>
-              )}
-              {status === 'RELEASED' && (
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400">
-                  ✕
-                </div>
-              )}
-            </div>
+        {/* Receipt-style Checkout Card */}
+        <Card className={`overflow-hidden rounded-2xl border border-border-subtle bg-surface-card shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all duration-300 ${
+          status === 'CONFIRMED' ? 'opacity-90' : status === 'RELEASED' ? 'opacity-80' : ''
+        }`}>
+          
+          <CardHeader className="p-8 pb-6 border-b border-border-subtle">
+            <div className="flex justify-between items-start gap-4">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-heading font-bold text-white tracking-tight leading-none">
+                  {reservation.product?.name}
+                </CardTitle>
+                <CardDescription className="text-2xs font-mono text-text-secondary uppercase select-all tracking-wider block">
+                  RESERVATION: {reservation.id}
+                </CardDescription>
+              </div>
 
-            <CardTitle className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-              Checkout Terminal
-            </CardTitle>
-            <CardDescription className="text-zinc-500 dark:text-zinc-400 font-mono text-xs select-all mt-1">
-              RESERVATION ID: {reservation.id}
-            </CardDescription>
-
-            <div className="mt-4 flex justify-center">
-              {status === 'PENDING' && (
-                <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-100 font-bold px-3 py-1 border border-amber-200/40 rounded-full dark:bg-amber-950/30 dark:text-amber-400">
-                  PENDING PURCHASE
-                </Badge>
-              )}
-              {status === 'CONFIRMED' && (
-                <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold px-3 py-1 border border-emerald-200/40 rounded-full dark:bg-emerald-950/30 dark:text-emerald-400">
-                  TRANSACTION CONFIRMED
-                </Badge>
-              )}
-              {status === 'RELEASED' && (
-                <Badge className="bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold px-3 py-1 border border-rose-200/40 rounded-full dark:bg-rose-950/30 dark:text-rose-400">
-                  {isExpired ? 'RESERVATION EXPIRED' : 'RESERVATION RELEASED'}
-                </Badge>
-              )}
+              {/* Status Badge */}
+              <div className="select-none">
+                {status === 'PENDING' && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-state-warning/20 bg-state-warning/15 px-3 py-1 text-2xs font-mono font-bold uppercase tracking-wide text-state-warning">
+                    <span className="h-1.5 w-1.5 rounded-full bg-state-warning animate-pulse-dot" />
+                    PENDING
+                  </span>
+                )}
+                {status === 'CONFIRMED' && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-state-success/20 bg-state-success/15 px-3 py-1 text-2xs font-mono font-bold uppercase tracking-wide text-state-success">
+                    CONFIRMED
+                  </span>
+                )}
+                {status === 'RELEASED' && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-text-tertiary/10 px-3 py-1 text-2xs font-mono font-bold uppercase tracking-wide text-text-secondary">
+                    {isExpired ? 'EXPIRED' : 'RELEASED'}
+                  </span>
+                )}
+              </div>
             </div>
           </CardHeader>
 
           <CardContent className="p-8 space-y-6">
             
-            {/* Countdown Clock Display */}
-            {status === 'PENDING' && (
-              <div className="text-center bg-zinc-50/50 dark:bg-zinc-800/20 rounded-2xl p-6 border border-zinc-100 dark:border-zinc-800/50">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block mb-1">
-                  Time Remaining to Complete Payment
+            {/* Countdown Clock Display (PENDING State) */}
+            {status === 'PENDING' && !isExpired && (
+              <div className="text-center bg-surface-bg/50 rounded-xl p-6 border border-border-subtle">
+                <span className="text-2xs font-heading font-extrabold uppercase tracking-wider text-text-secondary block mb-1">
+                  Time Remaining
                 </span>
-                <span className="text-5xl font-black font-mono tracking-wider text-amber-600 dark:text-amber-400 drop-shadow-sm select-none">
+                
+                {/* Large Syne font clock display ( MM:SS ) */}
+                <span className={`text-[4rem] font-heading font-extrabold tracking-wider leading-none drop-shadow-md select-none block ${
+                  isUrgent ? 'text-state-danger animate-timer-pulse' : 'text-white'
+                }`}>
                   {timeLeft}
                 </span>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-surface-bg rounded-full h-1.5 overflow-hidden mt-4 border border-border-subtle">
+                  <div
+                    className={`h-full transition-all duration-1000 ease-linear rounded-full ${barColor}`}
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
               </div>
             )}
 
+            {/* Confirmed State Header */}
             {status === 'CONFIRMED' && (
-              <div className="text-center bg-emerald-50/20 dark:bg-emerald-950/10 rounded-2xl p-6 border border-emerald-100/50 dark:border-emerald-900/20">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-1">
-                  Allocation Status
-                </span>
-                <span className="text-lg font-bold text-emerald-800 dark:text-emerald-400">
-                  Stock Allocated Permanently. Thank you for your purchase!
-                </span>
+              <div className="text-center py-6 select-none bg-state-success/5 border border-state-success/15 rounded-xl p-5">
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-state-success/15 border border-state-success/25 text-state-success mb-3 animate-scale-in">
+                  <Check className="h-6 w-6 stroke-[3]" />
+                </div>
+                <h2 className="text-xl font-heading font-bold text-white">
+                  Reservation Confirmed
+                </h2>
+                <p className="text-xs text-text-secondary mt-1">
+                  Units have been allocated to your order
+                </p>
               </div>
             )}
 
-            {status === 'RELEASED' && (
-              <div className="text-center bg-rose-50/20 dark:bg-rose-950/10 rounded-2xl p-6 border border-rose-100/50 dark:border-rose-900/20">
-                <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 block mb-1">
-                  Allocation Status
-                </span>
-                <span className="text-lg font-bold text-rose-800 dark:text-rose-400">
-                  {isExpired 
-                    ? '10-minute hold window expired. Stock has been auto-released.' 
-                    : 'Reservation cancelled successfully. Stock returned.'}
-                </span>
+            {/* Cancelled / Released State Header */}
+            {status === 'RELEASED' && !isExpired && (
+              <div className="text-center py-6 select-none bg-surface-bg/30 border border-border-subtle rounded-xl p-5">
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-text-tertiary/10 border border-border-subtle text-text-secondary mb-3">
+                  <X className="h-6 w-6" />
+                </div>
+                <h2 className="text-xl font-heading font-bold text-text-primary">
+                  Reservation Cancelled
+                </h2>
+                <p className="text-xs text-text-secondary mt-1">
+                  Units have been returned to stock
+                </p>
               </div>
             )}
 
-            {/* Product Details Section */}
+            {/* Expired State Header (Alert box replaces timer) */}
+            {status === 'RELEASED' && isExpired && (
+              <div className="rounded-xl border border-state-danger/25 bg-state-danger/10 p-5 flex items-start gap-3 text-state-danger select-none">
+                <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div className="space-y-1">
+                  <h4 className="font-heading font-bold text-sm text-white">This reservation has expired</h4>
+                  <p className="text-xs text-state-danger/80 leading-relaxed">
+                    The 10-minute hold window for these items has expired. The stock has been auto-released and returned to available inventory.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Details Section */}
             <div className="space-y-4">
-              <h4 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              <h4 className="text-2xs font-heading font-extrabold uppercase tracking-wider text-text-tertiary select-none">
                 Order Summary
               </h4>
-              <div className="rounded-2xl border border-zinc-100 bg-zinc-50/30 p-5 space-y-3 dark:border-zinc-800/50 dark:bg-zinc-800/10 text-sm">
-                <div className="flex justify-between">
-                  <span className="font-semibold text-zinc-500 dark:text-zinc-400">Product</span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{reservation.product?.name}</span>
+              <div className="rounded-xl border border-border-subtle bg-surface-bg/30 p-5 space-y-4 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-text-secondary">Quantity Reserved</span>
+                  <span className="font-heading font-bold text-white text-sm">{reservation.quantity} {reservation.quantity === 1 ? 'unit' : 'units'}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-semibold text-zinc-500 dark:text-zinc-400">Warehouse Location</span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{reservation.warehouse?.name}</span>
+                <div className="flex justify-between items-center border-t border-border-subtle/40 pt-3">
+                  <span className="font-medium text-text-secondary">Warehouse Location</span>
+                  <span className="font-heading font-bold text-white text-sm">{reservation.warehouse?.name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-semibold text-zinc-500 dark:text-zinc-400">Quantity Reserved</span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{reservation.quantity} units</span>
+                <div className="flex justify-between items-center border-t border-border-subtle/40 pt-3">
+                  <span className="font-medium text-text-secondary">Reserved At</span>
+                  <span className="font-mono text-text-secondary text-[11px]">{new Date(reservation.createdAt).toLocaleString()}</span>
                 </div>
-                {reservation.idempotencyKey && (
-                  <div className="flex justify-between border-t border-dashed border-zinc-200 pt-2 dark:border-zinc-800">
-                    <span className="font-semibold text-zinc-400 text-xs">Idempotency Key</span>
-                    <span className="font-mono text-zinc-500 text-xs">{reservation.idempotencyKey}</span>
-                  </div>
-                )}
+                <div className="flex justify-between items-center border-t border-border-subtle/40 pt-3">
+                  <span className="font-medium text-text-secondary">Expires At</span>
+                  <span className="font-mono text-text-secondary text-[11px]">{new Date(reservation.expiresAt).toLocaleString()}</span>
+                </div>
               </div>
             </div>
+
+            {reservation.idempotencyKey && (
+              <div className="rounded-xl bg-surface-bg border border-border-subtle p-3.5 text-[10px] text-text-tertiary select-none">
+                <span className="font-mono font-bold uppercase tracking-wider mr-1 text-brand-teal">Idempotency Key:</span>
+                <code className="select-all font-mono text-text-secondary">{reservation.idempotencyKey}</code>
+              </div>
+            )}
 
           </CardContent>
 
           {/* Action Buttons */}
-          {status === 'PENDING' && (
+          {status === 'PENDING' && !isExpired && (
             <CardFooter className="p-8 pt-0 flex flex-col gap-3">
               <Button
                 onClick={handleConfirm}
                 disabled={isActionLoading}
-                className="w-full py-6 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 shadow-lg cursor-pointer"
+                className="w-full py-5 rounded-lg font-heading font-bold bg-brand-indigo hover:bg-brand-indigo-hover text-white flex items-center justify-center gap-2 shadow-lg disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer transition-all"
               >
-                {isActionLoading ? 'Processing Payment...' : 'Confirm Purchase (Simulate Payment)'}
+                {isActionLoading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Processing Payment...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 stroke-[3]" />
+                    Confirm Purchase (Simulate Payment)
+                  </>
+                )}
               </Button>
               <Button
                 variant="outline"
                 onClick={handleRelease}
                 disabled={isActionLoading}
-                className="w-full py-6 rounded-xl font-semibold border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800 cursor-pointer"
+                className="w-full py-5 rounded-lg font-heading font-semibold bg-transparent text-state-danger border border-state-danger/40 hover:bg-state-danger/10 flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer transition-all"
               >
-                Cancel Reservation
+                {isActionLoading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-state-danger border-t-transparent" />
+                    Cancelling...
+                  </>
+                ) : (
+                  <>
+                    <X className="h-4 w-4" />
+                    Cancel Reservation
+                  </>
+                )}
               </Button>
             </CardFooter>
           )}
 
-          {status !== 'PENDING' && (
+          {/* Expired state action button */}
+          {status === 'RELEASED' && isExpired && (
             <CardFooter className="p-8 pt-0">
               <Button
                 onClick={() => router.push('/')}
-                className="w-full py-6 rounded-xl font-bold bg-zinc-950 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200 cursor-pointer"
+                className="w-full py-5 rounded-lg font-heading font-bold bg-brand-indigo hover:bg-brand-indigo-hover text-white shadow-lg cursor-pointer transition-all"
+              >
+                Browse Products
+              </Button>
+            </CardFooter>
+          )}
+
+          {/* Confirmed / Cancelled State Actions */}
+          {(status === 'CONFIRMED' || (status === 'RELEASED' && !isExpired)) && (
+            <CardFooter className="p-8 pt-0">
+              <Button
+                onClick={() => router.push('/')}
+                className="w-full py-5 rounded-lg font-heading font-bold bg-surface-bg border border-border-subtle text-white hover:border-border-hover cursor-pointer transition-all"
               >
                 Back to Product Store
               </Button>
